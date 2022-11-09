@@ -1,3 +1,7 @@
+use palette::encoding::{Linear, self};
+use palette::rgb::Rgb;
+use palette::LinSrgb;
+use palette::Gradient;
 use plotters::prelude::*;
 use polars::prelude::*;
 use std::error::Error;
@@ -121,12 +125,16 @@ fn next_potence(x: f64) -> f64 {
     10f64.powf(((x.log10() * 10f64).ceil()) / 10.0)
 }
 
+fn rbgcolor_from_gradient(gradient : Rgb<Linear<encoding::Srgb>, f32>) -> RGBColor
+{
+    let (r, g, b) = gradient.into_format().into_components();
+    RGBColor(r,g,b)
+}
+
 fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>> {
     let plot_filename = opt.outfile.as_ref().expect("Outfile missing").to_str().unwrap().to_string();
     println!("{}", plot_filename);
 
-    let plot_color = hex::decode(&opt.plot_color).expect("Decoding failed");
-    let plot_plotters_color = RGBColor(plot_color[0], plot_color[1], plot_color[2]);
     let number_of_panels = 1;
     let xdesc = &opt.xdesc;
     let ydesc = &opt.ydesc;
@@ -135,8 +143,18 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>> 
     let y = &df[opt.y - 1];
     let x_max: i64 = x.max().expect("x is non numerical? If file has a header use -h");
     let y_max: i64 = y.max().expect("y is non numerical? If file has a header use -h");
+    let y_min: i64 = y.min().expect("y is non numerical? If file has a header use -h");
     let x_dim: i64 = next_potence(x_max as f64) as i64;
     let y_dim: i64 = next_potence(y_max as f64) as i64;
+
+    let plot_color = hex::decode(&opt.plot_color).expect("Decoding failed");
+    let plot_plotters_color = RGBColor(plot_color[0], plot_color[1], plot_color[2]);
+
+    let grad4 = Gradient::new(vec![
+        LinSrgb::new(1.0, 0.1, 0.1),
+        LinSrgb::new(0.1, 0.1, 1.0),
+    ]);
+    
     let root = BitMapBackend::new(&plot_filename, (2560, number_of_panels as u32 * 1200)).into_drawing_area();
     let panels = root.split_evenly((number_of_panels as usize, 1));
     root.fill(&WHITE)?;
@@ -162,6 +180,7 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>> 
         .axis_desc_style(("sans-serif", 22u32))
         .draw()?;
 
+    
     let xy = x.i64()
                 .expect("x")
                 .into_iter()
@@ -181,7 +200,13 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>> 
         else if let Some(color_gradient_index) = opt.gradient
         {
             df[color_gradient_index - 1].i64().expect("facet as i64").into_iter()
-                .map(|c| ShapeStyle::from(Palette100::pick(c.unwrap_or(0) as usize)).filled()).collect()
+                .map(|c|
+                     ShapeStyle::from(
+                         rbgcolor_from_gradient(
+                                grad4.get((c.unwrap_or(y_min) as f32 - y_min as f32) / (y_max as f32 - y_min as f32))
+                             )
+                         ).filled()
+                    ).collect()
         }
         else
         {
