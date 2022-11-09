@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+hex = "0.4.3"
 plotters = "0.3.4"
 polars = "0.25.1"
 structopt = "0.3.26"

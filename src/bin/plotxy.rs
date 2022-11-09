@@ -21,6 +21,14 @@ struct Opt {
     /// column index to be used as X
     x: usize,
 
+    #[structopt(long, short, default_value="0.3")]
+    /// transparancy channel
+    alpha: f64,
+
+    #[structopt(long, short, default_value="1E88E5")]
+    /// default plot color
+    plot_color: String,
+
     #[structopt(long, short, default_value = "2")]
     /// column index to be used as Y
     y: usize,
@@ -117,6 +125,8 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>> 
     let plot_filename = opt.outfile.as_ref().expect("Outfile missing").to_str().unwrap().to_string();
     println!("{}", plot_filename);
 
+    let plot_color = hex::decode(&opt.plot_color).expect("Decoding failed");
+    let plot_plotters_color = RGBColor(plot_color[0], plot_color[1], plot_color[2]);
     let number_of_panels = 1;
     let xdesc = &opt.xdesc;
     let ydesc = &opt.ydesc;
@@ -176,7 +186,7 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>> 
         else
         {
             blue_iter.i64().expect("oops on blue iterator").into_iter()
-                .map(|_c| ShapeStyle::from(&BLUE).filled()).collect()
+                .map(|_c| ShapeStyle::from(plot_plotters_color.mix(opt.alpha)).filled()).collect()
         };
 
     let shapes = xy.zip(color_iterator) //.zip(color_iterator)
