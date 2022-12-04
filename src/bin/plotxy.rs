@@ -8,6 +8,10 @@ use std::error::Error;
 use std::io::Cursor;
 use std::path::PathBuf;
 use structopt::StructOpt;
+use plotters::chart::ChartBuilder;
+use plotters::coord::combinators::IntoLogRange;
+use std::fmt::Debug;
+
 
 #[allow(non_snake_case)]
 #[derive(Debug, StructOpt)]
@@ -56,7 +60,27 @@ struct Opt {
 
     #[structopt(long, short)]
     /// plot logarithmic Y-axis
+    logx: bool,
+
+    #[structopt(long, short)]
+    /// plot logarithmic Y-axis
     logy: bool,
+
+    #[structopt(long, default_value="0.0")]
+    /// minimum X dimension
+    x_dim_min: f64,
+
+    #[structopt(long)]
+    /// maximum X dimension
+    x_dim_max : Option<f64>,
+
+    #[structopt(long, default_value="0.0")]
+    /// minimum Y dimension
+    y_dim_min: f64,
+
+    #[structopt(long)]
+    /// maximum Y dimension
+    y_dim_max: Option<f64>,
 
     #[structopt(parse(from_os_str), long, short)]
     /// file to save PNG plot to, default append .plotyy.png to input filename
@@ -118,10 +142,12 @@ fn main() -> std::result::Result<(), Box<dyn Error>>
         .has_header(opt.header)
         .finish()
         .unwrap();
+
     plot_xy(&opt, df)
 }
 
-fn next_potence(x: f64) -> f64 {
+fn next_potence(x: f64) -> f64
+{
     10f64.powf(((x.log10() * 10f64).ceil()) / 10.0)
 }
 
@@ -141,11 +167,13 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>> 
     let idx : Series = (0..df.height() as i64).collect();
     let x = if opt.x == 0 { &idx } else { &df[opt.x - 1] };
     let y = &df[opt.y - 1];
-    let x_max: i64 = x.max().expect("x is non numerical? If file has a header use -h");
-    let y_max: i64 = y.max().expect("y is non numerical? If file has a header use -h");
-    let y_min: i64 = y.min().expect("y is non numerical? If file has a header use -h");
-    let x_dim: i64 = next_potence(x_max as f64) as i64;
-    let y_dim: i64 = next_potence(y_max as f64) as i64;
+    let x_max: f64 = x.max().expect("x is non numerical? If file has a header use -h");
+    let y_max: f64 = y.max().expect("y is non numerical? If file has a header use -h");
+    let y_min: f64 = y.min().expect("y is non numerical? If file has a header use -h");
+    let x_dim_min = opt.x_dim_min;
+    let y_dim_min = opt.y_dim_min;
+    let x_dim_max = opt.x_dim_max.unwrap_or(next_potence(x_max as f64));
+    let y_dim_max = opt.y_dim_max.unwrap_or(next_potence(y_max as f64));
 
     let plot_color = hex::decode(&opt.plot_color).expect("Decoding failed");
     let plot_plotters_color = RGBColor(plot_color[0], plot_color[1], plot_color[2]);
@@ -156,78 +184,134 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>> 
     ]);
     
     let root = BitMapBackend::new(&plot_filename, (2560, number_of_panels as u32 * 1200)).into_drawing_area();
-    let panels = root.split_evenly((number_of_panels as usize, 1));
     root.fill(&WHITE)?;
     root.titled(opt.title.as_ref().unwrap_or(&plot_filename), ("sans-serif", 20))?;
-    let mut chart = ChartBuilder::on(&panels[0])
-        .x_label_area_size(70u32)
-        .y_label_area_size(100u32)
-        .margin(26u32)
-        //.caption(format!("{ref_name}:{ref_start}-{ref_len}"), ("sans-serif", 20u32))
-        .build_cartesian_2d(
-            //(0u64..x_dim).into_segmented(),
-            0i64..x_dim,
-            0i64..y_dim,
-        )?;
 
-    chart
-        .configure_mesh()
-        .disable_x_mesh()
-        .bold_line_style(WHITE.mix(0.3))
-        .y_desc(ydesc)
-        .x_desc(xdesc)
-        .label_style(("sans-serif", 24u32))
-        .axis_desc_style(("sans-serif", 22u32))
-        .draw()?;
-
-    
-    let xy = x.i64()
+    let xf64 = x.cast(&DataType::Float64).expect("cast");
+    let yf64 = y.cast(&DataType::Float64).expect("cast");
+    let xy = xf64.f64()
                 .expect("x")
                 .into_iter()
-                .zip(y.i64().expect("y").into_iter())
+                .zip(yf64.f64().expect("y").into_iter());
             //.zip(df[3].i64().expect("facet as i64").into_iter())
             //    .zip(std::iter::repeat(1).map(|c| Some(c)))
-                ;
 
-    let blue_iter : Series = std::iter::repeat(1i64).take(df.height()).collect();
+    let blue_iter : Series = std::iter::repeat(1f64).take(df.height()).collect();
 
     let color_iterator : Vec<ShapeStyle> =
         if let Some(color_facet_index) = opt.color
         {
-            df[color_facet_index - 1].i64().expect("facet as i64").into_iter()
-                    .map(|c| ShapeStyle::from(Palette99::pick(c.unwrap_or(0) as usize)).filled()).collect()
+            df[color_facet_index - 1].f64().expect("facet as f64").into_iter()
+                    .map(|c| ShapeStyle::from(Palette99::pick(c.unwrap_or(0.0f64) as usize)).filled()).collect()
         }
         else if let Some(color_gradient_index) = opt.gradient
         {
-            df[color_gradient_index - 1].i64().expect("facet as i64").into_iter()
+            df[color_gradient_index - 1].f64().expect("facet as f64").into_iter()
                 .map(|c|
+                     {
+                     println!("{}", ((c.unwrap_or(y_min) - y_min) / (y_max - y_min)) as f32);
                      ShapeStyle::from(
                          rbgcolor_from_gradient(
-                                grad4.get((c.unwrap_or(y_min) as f32 - y_min as f32) / (y_max as f32 - y_min as f32))
+                                grad4.get(((c.unwrap_or(y_min) - y_min) / (y_max - y_min)) as f32)
                              )
                          ).filled()
+                     }
                     ).collect()
         }
         else
         {
-            blue_iter.i64().expect("oops on blue iterator").into_iter()
+            blue_iter.f64().expect("oops on blue iterator").into_iter()
                 .map(|_c| ShapeStyle::from(plot_plotters_color.mix(opt.alpha)).filled()).collect()
         };
 
     let shapes = xy.zip(color_iterator) //.zip(color_iterator)
         .map(|((x, y), c)|
-             match (x, y) {
+             match (x, y)
+             {
                  (Some(xx), Some(yy)) =>
-                   {
+                 {
                      Circle::new( (xx, yy), 5, c)
-                   }
-                 _ => {
+                 }
+                 _ =>
+                 {
                      println!("NA value as 0 0");
-                     Circle::new((0, 0), 5, c)
+                     Circle::new((0.0, 0.0), 5, c)
                  }
              });
 
-    chart.draw_series(shapes).expect("Backend Error");
+    let panels = root.split_evenly((number_of_panels as usize, 1));
+    let panel = &panels[0];
+    let mut chart = ChartBuilder::on(panel);
+    chart
+                .x_label_area_size(70u32)
+                .y_label_area_size(100u32)
+                .margin(26u32);
+    if opt.logx
+    {
+        if opt.logy
+        {
+            let mut grid = chart.build_cartesian_2d((x_dim_min..x_dim_max).log_scale(), (y_dim_min..y_dim_max).log_scale()).expect("grid");
+            grid
+                .configure_mesh()
+                .disable_x_mesh()
+                .bold_line_style(WHITE.mix(0.3))
+                .y_desc(ydesc)
+                .x_desc(xdesc)
+                .label_style(("sans-serif", 24u32))
+                .axis_desc_style(("sans-serif", 22u32))
+                .draw().expect("draw");
+
+            grid.draw_series(shapes).expect("Backend Error");
+        }
+        else
+        {
+            let mut grid = chart.build_cartesian_2d((x_dim_min..x_dim_max).log_scale(), y_dim_min..y_dim_max).expect("grid");
+            grid
+                .configure_mesh()
+                .disable_x_mesh()
+                .bold_line_style(WHITE.mix(0.3))
+                .y_desc(ydesc)
+                .x_desc(xdesc)
+                .label_style(("sans-serif", 24u32))
+                .axis_desc_style(("sans-serif", 22u32))
+                .draw().expect("draw");
+
+            grid.draw_series(shapes).expect("Backend Error");
+        }
+    }
+    else
+    {
+        if opt.logy
+        {
+            let mut grid = chart.build_cartesian_2d(x_dim_min..x_dim_max, (y_dim_min..y_dim_max).log_scale()).expect("grid");
+            grid
+                .configure_mesh()
+                .disable_x_mesh()
+                .bold_line_style(WHITE.mix(0.3))
+                .y_desc(ydesc)
+                .x_desc(xdesc)
+                .label_style(("sans-serif", 24u32))
+                .axis_desc_style(("sans-serif", 22u32))
+                .draw().expect("draw");
+
+            grid.draw_series(shapes).expect("Backend Error");
+        }
+        else
+        {
+            let mut grid = chart.build_cartesian_2d(x_dim_min..x_dim_max, y_dim_min..y_dim_max).expect("grid");
+            grid
+                .configure_mesh()
+                .disable_x_mesh()
+                .bold_line_style(WHITE.mix(0.3))
+                .y_desc(ydesc)
+                .x_desc(xdesc)
+                .label_style(("sans-serif", 24u32))
+                .axis_desc_style(("sans-serif", 22u32))
+                .draw().expect("draw");
+
+            grid.draw_series(shapes).expect("Backend Error");
+        }
+    }
     Ok(())
 }
 

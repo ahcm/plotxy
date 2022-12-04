@@ -9,5 +9,5 @@ edition = "2021"
 hex = "0.4.3"
 palette = "0.6.1"
 plotters = "0.3.4"
-polars = "0.25.1"
+polars = { version = "0.25.1", features = ["performant", "lazy"]}
 structopt = "0.3.26"
