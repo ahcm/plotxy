@@ -2,8 +2,11 @@
 name = "plotxy"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Andreas Hauser <Andreas.Hauser@LMU.de>"]
+description = "Commandline tool for plotting TSV/CSV data"
+license = "EUPL-1.2"
+keywords = ["plot", "command-line", "CLI", "visualization", "TSV", "CSV", "tabular"]
+repository = "https://github.com/ahcm/plotxy"
 
 [dependencies]
 hex = "0.4.3"
