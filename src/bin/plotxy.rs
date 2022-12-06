@@ -90,9 +90,13 @@ struct Opt {
     /// title above the plot, default filename
     title: Option<String>,
 
-    #[structopt(short, long, default_value = "1280x960")]
-    /// the x and y size of the plot
-    geometry: String,
+    #[structopt(long, default_value = "2560")]
+    /// image width
+    width: u32,
+
+    #[structopt(long, default_value = "1200")]
+    /// image width
+    height: u32,
 
     #[structopt(long, default_value = "X")]
     /// x-axis label
@@ -183,7 +187,7 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>> 
         LinSrgb::new(0.1, 0.1, 1.0),
     ]);
     
-    let root = BitMapBackend::new(&plot_filename, (2560, number_of_panels as u32 * 1200)).into_drawing_area();
+    let root = BitMapBackend::new(&plot_filename, (opt.width, number_of_panels * opt.height)).into_drawing_area();
     root.fill(&WHITE)?;
     root.titled(opt.title.as_ref().unwrap_or(&plot_filename), ("sans-serif", 20))?;
 
