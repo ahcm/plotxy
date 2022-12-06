@@ -56,7 +56,7 @@ struct Opt {
 
     #[structopt(long, short)]
     /// input has header line
-    header: bool,
+    Header: bool,
 
     #[structopt(long, short)]
     /// plot logarithmic Y-axis
@@ -139,7 +139,7 @@ fn main() -> std::result::Result<(), Box<dyn Error>>
 
     let df = CsvReader::new(Cursor::new(buf))
         .with_delimiter(delimiter)
-        .has_header(opt.header)
+        .has_header(opt.Header)
         .finish()
         .unwrap();
 
