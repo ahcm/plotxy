@@ -105,6 +105,14 @@ struct Opt {
     #[structopt(long, default_value = "Y")]
     /// y-axis label
     ydesc: String,
+
+    #[structopt(long, default_value = "70")]
+    /// x-axis label area size
+    xdesc_area: u32,
+
+    #[structopt(long, default_value = "100")]
+    /// y-axis label area size
+    ydesc_area: u32,
 }
 
 fn main() -> std::result::Result<(), Box<dyn Error>>
@@ -168,6 +176,8 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>> 
     let number_of_panels = 1;
     let xdesc = &opt.xdesc;
     let ydesc = &opt.ydesc;
+    let xdesc_area = opt.xdesc_area;
+    let ydesc_area = opt.ydesc_area;
     let idx : Series = (0..df.height() as i64).collect();
     let x = if opt.x == 0 { &idx } else { &df[opt.x - 1] };
     let y = &df[opt.y - 1];
@@ -247,8 +257,8 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>> 
     let panel = &panels[0];
     let mut chart = ChartBuilder::on(panel);
     chart
-                .x_label_area_size(70u32)
-                .y_label_area_size(100u32)
+                .x_label_area_size(xdesc_area)
+                .y_label_area_size(ydesc_area)
                 .margin(26u32);
     if opt.logx
     {
