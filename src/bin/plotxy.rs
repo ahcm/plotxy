@@ -1,7 +1,5 @@
-use palette::encoding::{self, Linear};
-use palette::rgb::Rgb;
-use palette::Gradient;
-use palette::LinSrgb;
+use colorgrad::Gradient;
+
 use plotters::chart::ChartBuilder;
 use plotters::coord::combinators::IntoLogRange;
 use plotters::prelude::*;
@@ -176,12 +174,6 @@ fn next_potence(x: f64) -> f64
     10f64.powf(((x.log10() * 10f64).ceil()) / 10.0)
 }
 
-fn rbgcolor_from_gradient(gradient: Rgb<Linear<encoding::Srgb>, f32>) -> RGBColor
-{
-    let (r, g, b) = gradient.into_format().into_components();
-    RGBColor(r, g, b)
-}
-
 fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>>
 {
     let plot_filename = opt
@@ -207,7 +199,7 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>>
     let y_max: f64 = y
         .max()
         .expect("y is non numerical? If file has a header use -H or --skip");
-    let y_min: f64 = y
+    let _y_min: f64 = y
         .min()
         .expect("y is non numerical? If file has a header use -H or --skip");
     let x_dim_min = opt.x_dim_min;
@@ -217,8 +209,6 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>>
 
     let plot_color = hex::decode(&opt.plot_color).expect("Decoding failed");
     let plot_plotters_color = RGBColor(plot_color[0], plot_color[1], plot_color[2]);
-
-    let grad4 = Gradient::new(vec![LinSrgb::new(1.0, 0.1, 0.1), LinSrgb::new(0.1, 0.1, 1.0)]);
 
     let root = BitMapBackend::new(&plot_filename, (opt.width, number_of_panels * opt.height))
         .into_drawing_area();
@@ -248,18 +238,7 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>>
     }
     else if let Some(color_gradient_index) = opt.gradient
     {
-        df[color_gradient_index - 1]
-            .f64()
-            .expect("facet as f64")
-            .into_iter()
-            .map(|c| {
-                println!("{}", ((c.unwrap_or(y_min) - y_min) / (y_max - y_min)) as f32);
-                ShapeStyle::from(rbgcolor_from_gradient(
-                    grad4.get(((c.unwrap_or(y_min) - y_min) / (y_max - y_min)) as f32),
-                ))
-                .filled()
-            })
-            .collect()
+        get_gradient_color_iter(&df[color_gradient_index - 1])
     }
     else
     {
@@ -368,4 +347,27 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>>
         }
     }
     Ok(())
+}
+
+fn get_gradient_color_iter(column: &Series) -> Vec<ShapeStyle>
+{
+    let grad = colorgrad::GradientBuilder::new()
+        .html_colors(&["yellow", "red"])
+        .domain(&[column.min().unwrap_or(0.0), column.max().unwrap_or(1.0)])
+        .build::<colorgrad::LinearGradient>()
+        .expect("prebuilt gradient should always work");
+
+    column
+        .f64()
+        .expect("facet as f64")
+        .into_iter()
+        .map(|c| {
+            ShapeStyle::from(rbgcolor_from_gradient(grad.at(c.unwrap() as f32).to_rgba8())).filled()
+        })
+        .collect()
+}
+
+fn rbgcolor_from_gradient(g: [u8; 4]) -> RGBColor
+{
+    RGBColor(g[0], g[1], g[2])
 }

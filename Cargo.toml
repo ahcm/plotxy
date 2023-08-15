@@ -9,6 +9,7 @@ keywords = ["plot", "command-line", "CLI", "visualization", "TSV"]
 repository = "https://github.com/ahcm/plotxy"
 
 [dependencies]
+colorgrad = { git = "https://github.com/mazznoer/colorgrad-rs", features = ["lab", "preset", "ggr", "named-colors"]}
 hex = "0.4.3"
 palette = "0.7.3"
 plotters = "0.3.5"
