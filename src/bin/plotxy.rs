@@ -181,9 +181,9 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>> 
     let idx : Series = (0..df.height() as i64).collect();
     let x = if opt.x == 0 { &idx } else { &df[opt.x - 1] };
     let y = &df[opt.y - 1];
-    let x_max: f64 = x.max().expect("x is non numerical? If file has a header use -h");
-    let y_max: f64 = y.max().expect("y is non numerical? If file has a header use -h");
-    let y_min: f64 = y.min().expect("y is non numerical? If file has a header use -h");
+    let x_max: f64 = x.max().expect("x is non numerical? If file has a header use -H");
+    let y_max: f64 = y.max().expect("y is non numerical? If file has a header use -H");
+    let y_min: f64 = y.min().expect("y is non numerical? If file has a header use -H");
     let x_dim_min = opt.x_dim_min;
     let y_dim_min = opt.y_dim_min;
     let x_dim_max = opt.x_dim_max.unwrap_or(next_potence(x_max as f64));
