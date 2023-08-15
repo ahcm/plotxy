@@ -51,8 +51,12 @@ struct Opt
     delimiter: String,
 
     #[structopt(long, short)]
-    /// input has header line
+    /// input has header line (see also --skip)
     Header: bool,
+
+    #[structopt(long, short, default_value = "0")]
+    /// skip lines before header
+    skip: usize,
 
     #[structopt(long, short)]
     /// plot logarithmic Y-axis
@@ -159,6 +163,7 @@ fn main() -> std::result::Result<(), Box<dyn Error>>
 
     let df = CsvReader::new(Cursor::new(buf))
         .with_delimiter(delimiter)
+        .with_skip_rows(opt.skip)
         .has_header(opt.Header)
         .finish()
         .unwrap();
@@ -198,13 +203,13 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>>
     let y = &df[opt.y - 1];
     let x_max: f64 = x
         .max()
-        .expect("x is non numerical? If file has a header use -H");
+        .expect("x is non numerical? If file has a header use -H or --skip");
     let y_max: f64 = y
         .max()
-        .expect("y is non numerical? If file has a header use -H");
+        .expect("y is non numerical? If file has a header use -H or --skip");
     let y_min: f64 = y
         .min()
-        .expect("y is non numerical? If file has a header use -H");
+        .expect("y is non numerical? If file has a header use -H or --skip");
     let x_dim_min = opt.x_dim_min;
     let y_dim_min = opt.y_dim_min;
     let x_dim_max = opt.x_dim_max.unwrap_or(next_potence(x_max as f64));
