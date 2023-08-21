@@ -358,6 +358,8 @@ fn get_gradient_color_iter(column: &Series) -> Vec<ShapeStyle>
         .expect("prebuilt gradient should always work");
 
     column
+        .cast(&DataType::Float64)
+        .expect("cast to f64 failed")
         .f64()
         .expect("facet as f64")
         .into_iter()
