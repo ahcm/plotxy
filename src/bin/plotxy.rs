@@ -222,10 +222,6 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>>
         .expect("x")
         .into_iter()
         .zip(yf64.f64().expect("y").into_iter());
-    //.zip(df[3].i64().expect("facet as i64").into_iter())
-    //    .zip(std::iter::repeat(1).map(|c| Some(c)))
-
-    let blue_iter: Series = std::iter::repeat(1f64).take(df.height()).collect();
 
     let color_iterator: Vec<ShapeStyle> = if let Some(color_facet_index) = opt.color
     {
@@ -244,9 +240,7 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>>
     }
     else
     {
-        blue_iter
-            .f64()
-            .expect("oops on blue iterator")
+        (0..xy.len())
             .into_iter()
             .map(|_c| ShapeStyle::from(plot_plotters_color.mix(opt.alpha)).filled())
             .collect()
