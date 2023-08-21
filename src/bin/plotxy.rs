@@ -236,7 +236,7 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>>
     }
     else if let Some(color_gradient_index) = opt.gradient
     {
-        get_gradient_color_iter(&df[color_gradient_index - 1])
+        get_gradient_color_iter(&opt, &df[color_gradient_index - 1])
     }
     else
     {
@@ -345,7 +345,7 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>>
     Ok(())
 }
 
-fn get_gradient_color_iter(column: &Series) -> Vec<ShapeStyle>
+fn get_gradient_color_iter(opt: &Opt, column: &Series) -> Vec<ShapeStyle>
 {
     let grad = colorgrad::GradientBuilder::new()
         .html_colors(&["yellow", "red"])
@@ -360,12 +360,14 @@ fn get_gradient_color_iter(column: &Series) -> Vec<ShapeStyle>
         .expect("facet as f64")
         .into_iter()
         .map(|c| {
-            ShapeStyle::from(rbgcolor_from_gradient(grad.at(c.unwrap() as f32).to_rgba8())).filled()
+            ShapeStyle::from(
+                rbgcolor_from_gradient(grad.at(c.unwrap() as f32).to_rgba8(), opt.alpha).filled(),
+            )
         })
         .collect()
 }
 
-fn rbgcolor_from_gradient(g: [u8; 4]) -> RGBColor
+fn rbgcolor_from_gradient(g: [u8; 4], alpha: f64) -> RGBAColor
 {
-    RGBColor(g[0], g[1], g[2])
+    RGBAColor(g[0], g[1], g[2], alpha)
 }
