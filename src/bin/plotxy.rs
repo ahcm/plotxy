@@ -230,6 +230,8 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>>
     let color_iterator: Vec<ShapeStyle> = if let Some(color_facet_index) = opt.color
     {
         df[color_facet_index - 1]
+            .cast(&DataType::Float64)
+            .expect("cast to f64 failed")
             .f64()
             .expect("facet as f64")
             .into_iter()
