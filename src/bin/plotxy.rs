@@ -1,12 +1,14 @@
 use colorgrad::Gradient;
 
 use plotters::chart::ChartBuilder;
-use plotters::coord::combinators::IntoLogRange;
+use plotters::element::{BackendCoordOnly, CoordMapper, Drawable, PointCollection};
 use plotters::prelude::*;
+use plotters::style::SizeDesc;
 use polars::prelude::*;
 use std::error::Error;
 use std::fmt::Debug;
 use std::io::Cursor;
+use std::iter::Zip;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -186,10 +188,22 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>>
     println!("{}", plot_filename);
 
     let number_of_panels = 1;
-    let xdesc = &opt.xdesc;
-    let ydesc = &opt.ydesc;
     let xdesc_area = opt.xdesc_area;
     let ydesc_area = opt.ydesc_area;
+
+    let root = BitMapBackend::new(&plot_filename, (opt.width, number_of_panels * opt.height))
+        .into_drawing_area();
+    root.fill(&WHITE)?;
+    root.titled(opt.title.as_ref().unwrap_or(&plot_filename), ("sans-serif", 20))?;
+
+    let panels = root.split_evenly((number_of_panels as usize, 1));
+    let panel = &panels[0];
+    let mut chart = ChartBuilder::on(panel);
+    chart
+        .x_label_area_size(xdesc_area)
+        .y_label_area_size(ydesc_area)
+        .margin(26u32);
+
     let idx: Series = (0..df.height() as i64).collect();
     let x = if opt.x == 0 { &idx } else { &df[opt.x - 1] };
     let y = &df[opt.y - 1];
@@ -202,28 +216,45 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>>
     let _y_min: f64 = y
         .min()
         .expect("y is non numerical? If file has a header use -H or --skip");
-    let x_dim_min = opt.x_dim_min;
-    let y_dim_min = opt.y_dim_min;
-    let x_dim_max = opt.x_dim_max.unwrap_or(next_potence(x_max as f64));
-    let y_dim_max = opt.y_dim_max.unwrap_or(next_potence(y_max as f64));
-
-    let plot_color = hex::decode(&opt.plot_color).expect("Decoding failed");
-    let plot_plotters_color = RGBColor(plot_color[0], plot_color[1], plot_color[2]);
-
-    let root = BitMapBackend::new(&plot_filename, (opt.width, number_of_panels * opt.height))
-        .into_drawing_area();
-    root.fill(&WHITE)?;
-    root.titled(opt.title.as_ref().unwrap_or(&plot_filename), ("sans-serif", 20))?;
 
     let xf64 = x.cast(&DataType::Float64).expect("cast");
     let yf64 = y.cast(&DataType::Float64).expect("cast");
-    let xy = xf64
+    let xyc = make_xyc(&xf64, &yf64, &df, &opt);
+    let shapes = xyc.map(|((x, y), c)| match (x, y)
+    {
+        (Some(xx), Some(yy)) => Circle::new((xx, yy), 5, c),
+        _ =>
+        {
+            println!("NA value as 0 0");
+            Circle::new((0.0, 0.0), 5, c)
+        }
+    });
+    Ok(plot_shapes(&mut chart, shapes, &opt, x_max, y_max)?)
+}
+
+/// Returns an iterator over x/y points and the color based on facet/gradient
+fn make_xyc<'a, 'b>(
+    x: &'a Series,
+    y: &'b Series,
+    df: &DataFrame,
+    opt: &Opt,
+) -> Zip<
+    Zip<
+        Box<dyn PolarsIterator<Item = Option<f64>> + 'a>,
+        Box<dyn PolarsIterator<Item = Option<f64>> + 'b>,
+    >,
+    std::vec::IntoIter<ShapeStyle>,
+>
+{
+    let plot_color = hex::decode(&opt.plot_color).expect("Decoding failed");
+    let plot_plotters_color = RGBColor(plot_color[0], plot_color[1], plot_color[2]);
+    let xy = x
         .f64()
         .expect("x")
         .into_iter()
-        .zip(yf64.f64().expect("y").into_iter());
+        .zip(y.f64().expect("y").into_iter());
 
-    let color_iterator: Vec<ShapeStyle> = if let Some(color_facet_index) = opt.color
+    let color_iterator = if let Some(color_facet_index) = opt.color
     {
         df[color_facet_index - 1]
             .cast(&DataType::Float64)
@@ -245,26 +276,28 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>>
             .map(|_c| ShapeStyle::from(plot_plotters_color.mix(opt.alpha)).filled())
             .collect()
     };
+    xy.zip(color_iterator)
+}
 
-    let shapes = xy
-        .zip(color_iterator) //.zip(color_iterator)
-        .map(|((x, y), c)| match (x, y)
-        {
-            (Some(xx), Some(yy)) => Circle::new((xx, yy), 5, c),
-            _ =>
-            {
-                println!("NA value as 0 0");
-                Circle::new((0.0, 0.0), 5, c)
-            }
-        });
-
-    let panels = root.split_evenly((number_of_panels as usize, 1));
-    let panel = &panels[0];
-    let mut chart = ChartBuilder::on(panel);
-    chart
-        .x_label_area_size(xdesc_area)
-        .y_label_area_size(ydesc_area)
-        .margin(26u32);
+fn plot_shapes<'a, 'b, DB, T>(
+    chart: &mut ChartBuilder<'a, 'b, DB>,
+    shapes: T,
+    opt: &Opt,
+    x_max: f64,
+    y_max: f64,
+) where
+    DB: DrawingBackend,
+    T: IntoIterator,
+    T::Item: Drawable<DB>,
+    for<'d> &'d <T as IntoIterator>::Item: PointCollection<'d, (f64, f64)>,
+    //T::Item: PointCollection<'b, (f64, f64)>,
+{
+    let xdesc = &opt.xdesc;
+    let ydesc = &opt.ydesc;
+    let x_dim_min = opt.x_dim_min;
+    let y_dim_min = opt.y_dim_min;
+    let x_dim_max = opt.x_dim_max.unwrap_or(next_potence(x_max as f64));
+    let y_dim_max = opt.y_dim_max.unwrap_or(next_potence(y_max as f64));
     if opt.logx
     {
         if opt.logy
@@ -342,7 +375,6 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>>
             grid.draw_series(shapes).expect("Backend Error");
         }
     }
-    Ok(())
 }
 
 fn get_gradient_color_iter(opt: &Opt, column: &Series) -> Vec<ShapeStyle>
