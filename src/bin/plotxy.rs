@@ -229,7 +229,8 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>>
             Circle::new((0.0, 0.0), 5, c)
         }
     });
-    Ok(plot_shapes(&mut chart, shapes, &opt, x_max, y_max)?)
+    plot_shapes(&mut chart, shapes, &opt, x_max, y_max);
+    Ok(())
 }
 
 /// Returns an iterator over x/y points and the color based on facet/gradient
@@ -290,7 +291,6 @@ fn plot_shapes<'a, 'b, DB, T>(
     T: IntoIterator,
     T::Item: Drawable<DB>,
     for<'d> &'d <T as IntoIterator>::Item: PointCollection<'d, (f64, f64)>,
-    //T::Item: PointCollection<'b, (f64, f64)>,
 {
     let xdesc = &opt.xdesc;
     let ydesc = &opt.ydesc;
