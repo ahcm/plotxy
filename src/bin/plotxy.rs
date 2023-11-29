@@ -1,9 +1,9 @@
 use colorgrad::Gradient;
 
 use plotters::chart::ChartBuilder;
-use plotters::element::{BackendCoordOnly, CoordMapper, Drawable, PointCollection};
+use plotters::element::{Drawable, PointCollection};
 use plotters::prelude::*;
-use plotters::style::SizeDesc;
+
 use polars::prelude::*;
 use std::error::Error;
 use std::fmt::Debug;
