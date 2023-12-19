@@ -162,7 +162,7 @@ fn main() -> std::result::Result<(), Box<dyn Error>>
     input.read_to_end(&mut buf).expect("Error reading input");
 
     let df = CsvReader::new(Cursor::new(buf))
-        .with_delimiter(delimiter)
+        .with_separator(delimiter)
         .with_skip_rows(opt.skip)
         .has_header(opt.Header)
         .finish()
