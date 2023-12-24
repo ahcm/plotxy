@@ -86,6 +86,10 @@ struct Opt
     /// file to save PNG plot to, default append .plotyy.png to input filename
     outfile: Option<PathBuf>,
 
+    #[structopt(long)]
+    /// set output format to svg
+    svg: bool,
+
     #[structopt(short, long)]
     /// title above the plot, default filename
     title: Option<String>,
@@ -140,7 +144,14 @@ fn main() -> std::result::Result<(), Box<dyn Error>>
                 .file_name()
                 .unwrap()
                 .to_string_lossy(),
-            ".plotxy.png"
+            if opt.svg
+            {
+                ".plotxy.svg"
+            }
+            else
+            {
+                ".plotxy.png"
+            }
         ));
         opt.outfile = Some(outname)
     }
@@ -185,20 +196,53 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>>
         .to_str()
         .unwrap()
         .to_string();
+
     println!("{}", plot_filename);
 
     let number_of_panels = 1;
-    let xdesc_area = opt.xdesc_area;
-    let ydesc_area = opt.ydesc_area;
 
-    let root = BitMapBackend::new(&plot_filename, (opt.width, number_of_panels * opt.height))
-        .into_drawing_area();
-    root.fill(&WHITE)?;
-    root.titled(opt.title.as_ref().unwrap_or(&plot_filename), ("sans-serif", 20))?;
+    if opt.svg
+    {
+        plot_on_backend(
+            opt,
+            df,
+            SVGBackend::new(&plot_filename, (opt.width, number_of_panels * opt.height)),
+        );
+    }
+    else
+    {
+        plot_on_backend(
+            opt,
+            df,
+            BitMapBackend::new(&plot_filename, (opt.width, number_of_panels * opt.height)),
+        );
+    }
+    Ok(())
+}
 
+fn plot_on_backend<'a, B>(opt: &Opt, df: DataFrame, backend: B)
+where
+    B: DrawingBackend,
+{
+    let plot_filename = opt
+        .outfile
+        .as_ref()
+        .expect("Outfile missing")
+        .to_str()
+        .unwrap()
+        .to_string();
+
+    let root = Box::new(backend.into_drawing_area());
+    root.fill(&WHITE).expect("root.fill failed");
+    root.titled(opt.title.as_ref().unwrap_or(&plot_filename), ("sans-serif", 20))
+        .expect("root.titled failed");
+
+    let number_of_panels = 1;
     let panels = root.split_evenly((number_of_panels as usize, 1));
     let panel = &panels[0];
-    let mut chart = ChartBuilder::on(panel);
+    let mut chart = ChartBuilder::on(&panel);
+    let xdesc_area = opt.xdesc_area;
+    let ydesc_area = opt.ydesc_area;
     chart
         .x_label_area_size(xdesc_area)
         .y_label_area_size(ydesc_area)
@@ -230,7 +274,6 @@ fn plot_xy(opt: &Opt, df: DataFrame) -> std::result::Result<(), Box<dyn Error>>
         }
     });
     plot_shapes(&mut chart, shapes, &opt, x_max, y_max);
-    Ok(())
 }
 
 /// Returns an iterator over x/y points and the color based on facet/gradient
