@@ -1,6 +1,6 @@
 [package]
 name = "plotxy"
-version = "0.1.2"
+version = "0.2"
 edition = "2021"
 authors = ["Andreas Hauser <Andreas.Hauser@LMU.de>"]
 description = "Commandline tool for plotting TSV/CSV data"
