@@ -6,7 +6,7 @@ EUPL 1.2
 
 # Usage
 ```
-plotxy 0.1.1
+plotxy 0.2.1
 Plots tabular data
 
 USAGE:
@@ -17,6 +17,7 @@ FLAGS:
     -h, --help       Prints help information
     -l, --logx       plot logarithmic Y-axis
     -l, --logy       plot logarithmic Y-axis
+        --svg        set output format to svg
     -V, --version    Prints version information
 
 OPTIONS:
