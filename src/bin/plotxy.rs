@@ -117,6 +117,22 @@ struct Opt
     #[structopt(long, default_value = "100")]
     /// y-axis label area size
     ydesc_area: u32,
+
+    #[structopt(long, default_value = "sans-serif")]
+    /// label font name
+    label_font: String,
+
+    #[structopt(long, default_value = "24")]
+    /// label font size
+    label_font_size: u32,
+
+    #[structopt(long, default_value = "sans-serif")]
+    /// axis description font name
+    axis_desc_font: String,
+
+    #[structopt(long, default_value = "22")]
+    /// axis description font size
+    axis_desc_font_size: u32,
 }
 
 fn main() -> std::result::Result<(), Box<dyn Error>>
@@ -356,8 +372,8 @@ fn plot_shapes<'a, 'b, DB, T>(
                 .bold_line_style(WHITE.mix(0.3))
                 .y_desc(ydesc)
                 .x_desc(xdesc)
-                .label_style(("sans-serif", 24u32))
-                .axis_desc_style(("sans-serif", 22u32))
+                .label_style((opt.label_font.as_str(), opt.label_font_size))
+                .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
                 .draw()
                 .expect("draw");
 
@@ -373,8 +389,8 @@ fn plot_shapes<'a, 'b, DB, T>(
                 .bold_line_style(WHITE.mix(0.3))
                 .y_desc(ydesc)
                 .x_desc(xdesc)
-                .label_style(("sans-serif", 24u32))
-                .axis_desc_style(("sans-serif", 22u32))
+                .label_style((opt.label_font.as_str(), opt.label_font_size))
+                .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
                 .draw()
                 .expect("draw");
 
@@ -393,8 +409,8 @@ fn plot_shapes<'a, 'b, DB, T>(
                 .bold_line_style(WHITE.mix(0.3))
                 .y_desc(ydesc)
                 .x_desc(xdesc)
-                .label_style(("sans-serif", 24u32))
-                .axis_desc_style(("sans-serif", 22u32))
+                .label_style((opt.label_font.as_str(), opt.label_font_size))
+                .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
                 .draw()
                 .expect("draw");
 
@@ -410,8 +426,8 @@ fn plot_shapes<'a, 'b, DB, T>(
                 .bold_line_style(WHITE.mix(0.3))
                 .y_desc(ydesc)
                 .x_desc(xdesc)
-                .label_style(("sans-serif", 24u32))
-                .axis_desc_style(("sans-serif", 22u32))
+                .label_style((opt.label_font.as_str(), opt.label_font_size))
+                .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
                 .draw()
                 .expect("draw");
 
