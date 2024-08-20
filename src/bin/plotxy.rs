@@ -133,6 +133,14 @@ struct Opt
     #[structopt(long, default_value = "22")]
     /// axis description font size
     axis_desc_font_size: u32,
+
+    #[structopt(long, default_value = "sans-serif")]
+    /// title font name
+    title_font: String,
+
+    #[structopt(long, default_value = "24")]
+    /// title font size
+    title_font_size: u32,
 }
 
 fn main() -> std::result::Result<(), Box<dyn Error>>
@@ -250,8 +258,11 @@ where
 
     let root = Box::new(backend.into_drawing_area());
     root.fill(&WHITE).expect("root.fill failed");
-    root.titled(opt.title.as_ref().unwrap_or(&plot_filename), ("sans-serif", 20))
-        .expect("root.titled failed");
+    root.titled(
+        opt.title.as_ref().unwrap_or(&plot_filename),
+        (opt.title_font.as_str(), opt.title_font_size),
+    )
+    .expect("root.titled failed");
 
     let number_of_panels = 1;
     let panels = root.split_evenly((number_of_panels as usize, 1));
