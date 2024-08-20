@@ -13,5 +13,5 @@ colorgrad = { version = "0.7.0", features = ["lab", "preset", "ggr", "named-colo
 hex = "0.4.3"
 palette = "0.7.3"
 plotters = "0.3.6"
-polars = { version = "0.35.4", features = ["performant", "lazy"]}
+polars = { version = "0.35.4", features = ["performant", "lazy", "dtype-categorical"]}
 structopt = "0.3.26"

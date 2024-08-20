@@ -328,12 +328,14 @@ fn make_xyc<'a, 'b>(
     let color_iterator = if let Some(color_facet_index) = opt.color
     {
         df[color_facet_index - 1]
+            .cast(&DataType::Categorical(None))
+            .expect("cast to Categorial failed")
             .cast(&DataType::Float64)
             .expect("cast to f64 failed")
             .f64()
             .expect("facet as f64")
             .into_iter()
-            .map(|c| ShapeStyle::from(Palette99::pick(c.unwrap_or(0.0f64) as usize)).filled())
+            .map(|c| ShapeStyle::from(Palette99::pick(c.expect("color as f64") as usize)).filled())
             .collect()
     }
     else if let Some(color_gradient_index) = opt.gradient
