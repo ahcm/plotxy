@@ -141,6 +141,10 @@ struct Opt
     #[structopt(long, default_value = "24")]
     /// title font size
     title_font_size: u32,
+
+    #[structopt(long, default_value = "3")]
+    /// point size, radius
+    point_size: u32,
 }
 
 fn main() -> std::result::Result<(), Box<dyn Error>>
@@ -293,11 +297,11 @@ where
     let xyc = make_xyc(&xf64, &yf64, &df, &opt);
     let shapes = xyc.map(|((x, y), c)| match (x, y)
     {
-        (Some(xx), Some(yy)) => Circle::new((xx, yy), 5, c),
+        (Some(xx), Some(yy)) => Circle::new((xx, yy), opt.point_size, c),
         _ =>
         {
             println!("NA value as 0 0");
-            Circle::new((0.0, 0.0), 5, c)
+            Circle::new((0.0, 0.0), opt.point_size, c)
         }
     });
     plot_shapes(&mut chart, shapes, &opt, x_max, y_max);
