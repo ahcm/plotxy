@@ -83,7 +83,7 @@ struct Opt
     y_dim_max: Option<f64>,
 
     #[structopt(parse(from_os_str), long, short)]
-    /// file to save PNG plot to, default append .plotyy.png to input filename
+    /// file to save PNG plot to, default append .plotxy.png to input filename
     outfile: Option<PathBuf>,
 
     #[structopt(long)]
