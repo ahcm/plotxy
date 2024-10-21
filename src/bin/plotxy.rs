@@ -145,6 +145,10 @@ struct Opt
     #[structopt(long, default_value = "3")]
     /// point size, radius
     point_size: u32,
+
+    #[structopt(long, default_value = "circle")]
+    /// plotting shape: circle, column
+    shape: String,
 }
 
 fn main() -> std::result::Result<(), Box<dyn Error>>
@@ -295,16 +299,36 @@ where
     let xf64 = x.cast(&DataType::Float64).expect("cast");
     let yf64 = y.cast(&DataType::Float64).expect("cast");
     let xyc = make_xyc(&xf64, &yf64, &df, &opt);
-    let shapes = xyc.map(|((x, y), c)| match (x, y)
+
+    match opt.shape.as_str()
     {
-        (Some(xx), Some(yy)) => Circle::new((xx, yy), opt.point_size, c),
+        "column" =>
+        {
+            let shapes = xyc.map(|((x, y), c)| match (x, y)
+            {
+                (Some(xx), Some(yy)) => Rectangle::new([(xx - 0.4f64, yy), (xx + 0.4f64, 0f64)], c),
+                _ =>
+                {
+                    println!("NA value as 0 0");
+                    Rectangle::new([(0.0, 0.0), (0.0, 0.0)], c)
+                }
+            });
+            plot_shapes(&mut chart, shapes, &opt, x_max, y_max);
+        }
         _ =>
         {
-            println!("NA value as 0 0");
-            Circle::new((0.0, 0.0), opt.point_size, c)
+            let shapes = xyc.map(|((x, y), c)| match (x, y)
+            {
+                (Some(xx), Some(yy)) => Circle::new((xx, yy), opt.point_size, c),
+                _ =>
+                {
+                    println!("NA value as 0 0");
+                    Circle::new((0.0, 0.0), opt.point_size, c)
+                }
+            });
+            plot_shapes(&mut chart, shapes, &opt, x_max, y_max);
         }
-    });
-    plot_shapes(&mut chart, shapes, &opt, x_max, y_max);
+    }
 }
 
 /// Returns an iterator over x/y points and the color based on facet/gradient
