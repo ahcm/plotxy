@@ -12,6 +12,6 @@ repository = "https://github.com/ahcm/plotxy"
 colorgrad = { version = "0.7.0", features = ["lab", "preset", "ggr", "named-colors"]}
 hex = "0.4.3"
 palette = "0.7.3"
-plotters = "0.3.6"
+plotters = "0.3.7"
 polars = { version = "0.46", features = ["performant", "lazy", "dtype-categorical"] }
 structopt = "0.3.26"
