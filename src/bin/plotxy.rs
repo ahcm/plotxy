@@ -7,6 +7,7 @@ use plotters::prelude::*;
 use polars::prelude::*;
 use std::error::Error;
 use std::fmt::Debug;
+use std::future::ready;
 use std::io::Cursor;
 use std::iter::Zip;
 use std::path::PathBuf;
@@ -204,12 +205,20 @@ fn main() -> std::result::Result<(), Box<dyn Error>>
     let mut buf = Vec::new();
     input.read_to_end(&mut buf).expect("Error reading input");
 
-    let df = CsvReader::new(Cursor::new(buf))
+    
+    let csv_parse_options = CsvParseOptions::default()
         .with_separator(delimiter)
+        .with_try_parse_dates(false)
+        .with_missing_is_null(true)
+        .with_truncate_ragged_lines(true);
+
+    let csv_read_options = CsvReadOptions::default()
+        .with_parse_options(csv_parse_options)
+        .with_ignore_errors(true)
         .with_skip_rows(opt.skip)
-        .has_header(opt.Header)
-        .finish()
-        .unwrap();
+        .with_has_header(opt.Header);
+
+    let df = csv_read_options.into_reader_with_file_handle(Cursor::new(buf)).finish().unwrap();
 
     plot_xy(&opt, df)
 }
@@ -284,17 +293,20 @@ where
         .margin(26u32);
 
     let idx: Series = (0..df.height() as i64).collect();
-    let x = if opt.x == 0 { &idx } else { &df[opt.x - 1] };
-    let y = &df[opt.y - 1];
+    let x = if opt.x == 0 { &idx } else { &df[opt.x - 1].as_series().unwrap() };
+    let y = &df[opt.y - 1].as_series().unwrap();
     let x_max: f64 = x
         .max()
-        .expect("x is non numerical? If file has a header use -H or --skip");
+        .expect("x is non numerical? If file has a header use -H or --skip")
+        .expect("some data for x");
     let y_max: f64 = y
         .max()
-        .expect("y is non numerical? If file has a header use -H or --skip");
+        .expect("y is non numerical? If file has a header use -H or --skip")
+        .expect("some data for y");
     let _y_min: f64 = y
         .min()
-        .expect("y is non numerical? If file has a header use -H or --skip");
+        .expect("y is non numerical? If file has a header use -H or --skip")
+        .expect("some data for y");
 
     let xf64 = x.cast(&DataType::Float64).expect("cast");
     let yf64 = y.cast(&DataType::Float64).expect("cast");
@@ -356,7 +368,7 @@ fn make_xyc<'a, 'b>(
     let color_iterator = if let Some(color_facet_index) = opt.color
     {
         df[color_facet_index - 1]
-            .cast(&DataType::Categorical(None))
+            .cast(&DataType::Categorical(None, CategoricalOrdering::Lexical))
             .expect("cast to Categorial failed")
             .cast(&DataType::Float64)
             .expect("cast to f64 failed")
@@ -368,7 +380,7 @@ fn make_xyc<'a, 'b>(
     }
     else if let Some(color_gradient_index) = opt.gradient
     {
-        get_gradient_color_iter(&opt, &df[color_gradient_index - 1])
+        get_gradient_color_iter(&opt, &df[color_gradient_index - 1].as_series().unwrap())
     }
     else
     {
@@ -477,19 +489,16 @@ fn plot_shapes<'a, 'b, DB, T>(
     }
 }
 
-fn get_gradient_color_iter(opt: &Opt, column: &Series) -> Vec<ShapeStyle>
+fn get_gradient_color_iter(opt: &Opt, series: &Series) -> Vec<ShapeStyle>
 {
+    let values = series.f32().expect("failed to convert gradient color column into f32");
     let grad = colorgrad::GradientBuilder::new()
         .html_colors(&["yellow", "red"])
-        .domain(&[column.min().unwrap_or(0.0), column.max().unwrap_or(1.0)])
+        .domain(&[values.min().unwrap(), values.max().unwrap()])
         .build::<colorgrad::LinearGradient>()
         .expect("prebuilt gradient should always work");
 
-    column
-        .cast(&DataType::Float64)
-        .expect("cast to f64 failed")
-        .f64()
-        .expect("facet as f64")
+    values
         .into_iter()
         .map(|c| {
             ShapeStyle::from(
