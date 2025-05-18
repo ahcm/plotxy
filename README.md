@@ -4,6 +4,26 @@ Plot tabular data from the command line
 # License
 EUPL 1.2
 
+# Install
+
+```
+cargo install plotxy
+```
+
+In general if install fails, try with --locked.
+
+```
+cargo install --locked plotxy
+```
+
+## Version 0.2.2 on MacOS
+
+There is a SIMD change, that has not been reflected in a released version of pathfinder, an underlying font raster library.
+Try to use a rust version before the SIMD change, e.g.:
+```
+cargo +nightly-2024-08-04 install --locked plotxy
+````
+
 # Usage
 ```
 plotxy 0.2.2
