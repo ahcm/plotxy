@@ -292,39 +292,39 @@ fn format_si_number(value: f64) -> String
 
     if abs_value >= 1e12
     {
-        format!("{:.1}T", value / 1e12)
+        format!("{:.2}T", value / 1e12)
     }
     else if abs_value >= 1e9
     {
-        format!("{:.1}G", value / 1e9)
+        format!("{:.2}G", value / 1e9)
     }
     else if abs_value >= 1e6
     {
-        format!("{:.1}M", value / 1e6)
+        format!("{:.2}M", value / 1e6)
     }
     else if abs_value >= 1e3
     {
-        format!("{:.1}K", value / 1e3)
+        format!("{:.2}K", value / 1000.0)
     }
     else if abs_value >= 1.0
     {
-        format!("{:.1}", value)
+        format!("{:.2}", value)
     }
     else if abs_value >= 1e-3
     {
-        format!("{:.1}m", value * 1e3)
+        format!("{:.2}m", value * 1e3)
     }
     else if abs_value >= 1e-6
     {
-        format!("{:.1}μ", value * 1e6)
+        format!("{:.2}μ", value * 1e6)
     }
     else if abs_value >= 1e-9
     {
-        format!("{:.1}n", value * 1e9)
+        format!("{:.2}n", value * 1e9)
     }
     else if abs_value >= 1e-12
     {
-        format!("{:.1}p", value * 1e12)
+        format!("{:.2}p", value * 1e12)
     }
     else if abs_value == 0.0
     {
