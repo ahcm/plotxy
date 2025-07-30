@@ -11,7 +11,8 @@ use std::iter::Zip;
 use std::path::PathBuf;
 
 #[derive(Debug)]
-enum PlotError {
+enum PlotError
+{
     IoError(std::io::Error),
     PolarsError(PolarsError),
     HexDecodeError(hex::FromHexError),
@@ -19,9 +20,12 @@ enum PlotError {
     InvalidData(String),
 }
 
-impl std::fmt::Display for PlotError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
+impl std::fmt::Display for PlotError
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+    {
+        match self
+        {
             PlotError::IoError(e) => write!(f, "IO error: {}", e),
             PlotError::PolarsError(e) => write!(f, "Data processing error: {}", e),
             PlotError::HexDecodeError(e) => write!(f, "Invalid color format: {}", e),
@@ -33,20 +37,26 @@ impl std::fmt::Display for PlotError {
 
 impl Error for PlotError {}
 
-impl From<std::io::Error> for PlotError {
-    fn from(error: std::io::Error) -> Self {
+impl From<std::io::Error> for PlotError
+{
+    fn from(error: std::io::Error) -> Self
+    {
         PlotError::IoError(error)
     }
 }
 
-impl From<PolarsError> for PlotError {
-    fn from(error: PolarsError) -> Self {
+impl From<PolarsError> for PlotError
+{
+    fn from(error: PolarsError) -> Self
+    {
         PlotError::PolarsError(error)
     }
 }
 
-impl From<hex::FromHexError> for PlotError {
-    fn from(error: hex::FromHexError) -> Self {
+impl From<hex::FromHexError> for PlotError
+{
+    fn from(error: hex::FromHexError) -> Self
+    {
         PlotError::HexDecodeError(error)
     }
 }
@@ -90,7 +100,7 @@ struct Opt
     /// column delimiter
     delimiter: String,
 
-    #[arg(long, short)]
+    #[arg(short = 'H', long)]
     /// input has header line (see also --skip)
     Header: bool,
 
@@ -102,7 +112,7 @@ struct Opt
     /// plot logarithmic X-axis
     logx: bool,
 
-    #[arg(long, short)]
+    #[arg(long)]
     /// plot logarithmic Y-axis
     logy: bool,
 
@@ -189,6 +199,10 @@ struct Opt
     #[arg(long, default_value = "circle")]
     /// plotting shape: circle, column
     shape: String,
+
+    #[arg(long)]
+    /// use SI number formatting for axis labels (K, M, G, etc.)
+    si_format: bool,
 }
 
 fn main() -> Result<(), PlotError>
@@ -244,7 +258,6 @@ fn main() -> Result<(), PlotError>
     let mut buf = Vec::new();
     input.read_to_end(&mut buf).expect("Error reading input");
 
-    
     let csv_parse_options = CsvParseOptions::default()
         .with_separator(delimiter)
         .with_try_parse_dates(false)
@@ -257,7 +270,9 @@ fn main() -> Result<(), PlotError>
         .with_skip_rows(opt.skip)
         .with_has_header(opt.Header);
 
-    let df = csv_read_options.into_reader_with_file_handle(Cursor::new(buf)).finish()?;
+    let df = csv_read_options
+        .into_reader_with_file_handle(Cursor::new(buf))
+        .finish()?;
 
     plot_xy(&opt, df)
 }
@@ -265,6 +280,56 @@ fn main() -> Result<(), PlotError>
 fn next_potence(x: f64) -> f64
 {
     10f64.powf(((x.log10() * 10f64).ceil()) / 10.0)
+}
+
+fn format_si_number(value: f64) -> String
+{
+    let abs_value = value.abs();
+
+    if abs_value >= 1e12
+    {
+        format!("{:.1}T", value / 1e12)
+    }
+    else if abs_value >= 1e9
+    {
+        format!("{:.1}G", value / 1e9)
+    }
+    else if abs_value >= 1e6
+    {
+        format!("{:.1}M", value / 1e6)
+    }
+    else if abs_value >= 1e3
+    {
+        format!("{:.1}K", value / 1e3)
+    }
+    else if abs_value >= 1.0
+    {
+        format!("{:.1}", value)
+    }
+    else if abs_value >= 1e-3
+    {
+        format!("{:.1}m", value * 1e3)
+    }
+    else if abs_value >= 1e-6
+    {
+        format!("{:.1}μ", value * 1e6)
+    }
+    else if abs_value >= 1e-9
+    {
+        format!("{:.1}n", value * 1e9)
+    }
+    else if abs_value >= 1e-12
+    {
+        format!("{:.1}p", value * 1e12)
+    }
+    else if abs_value == 0.0
+    {
+        "0".to_string()
+    }
+    else
+    {
+        format!("{:.2e}", value)
+    }
 }
 
 fn plot_xy(opt: &Opt, df: DataFrame) -> Result<(), PlotError>
@@ -332,15 +397,21 @@ where
         .margin(26u32);
 
     let idx: Series = (0..df.height() as i64).collect();
-    let x = if opt.x == 0 { 
-        &idx 
-    } else { 
-        df.get_columns().get(opt.x - 1)
+    let x = if opt.x == 0
+    {
+        &idx
+    }
+    else
+    {
+        df.get_columns()
+            .get(opt.x - 1)
             .ok_or_else(|| PlotError::InvalidColumn(format!("X column {} not found", opt.x)))?
             .as_series()
             .ok_or_else(|| PlotError::InvalidColumn("X column conversion failed".to_string()))?
     };
-    let y = df.get_columns().get(opt.y - 1)
+    let y = df
+        .get_columns()
+        .get(opt.y - 1)
         .ok_or_else(|| PlotError::InvalidColumn(format!("Y column {} not found", opt.y)))?
         .as_series()
         .ok_or_else(|| PlotError::InvalidColumn("Y column conversion failed".to_string()))?;
@@ -397,13 +468,16 @@ fn make_xyc<'a, 'b>(
     y: &'b Series,
     df: &DataFrame,
     opt: &Opt,
-) -> Result<Zip<
+) -> Result<
     Zip<
-        Box<dyn PolarsIterator<Item = Option<f64>> + 'a>,
-        Box<dyn PolarsIterator<Item = Option<f64>> + 'b>,
+        Zip<
+            Box<dyn PolarsIterator<Item = Option<f64>> + 'a>,
+            Box<dyn PolarsIterator<Item = Option<f64>> + 'b>,
+        >,
+        std::vec::IntoIter<ShapeStyle>,
     >,
-    std::vec::IntoIter<ShapeStyle>,
->, PlotError>
+    PlotError,
+>
 {
     let plot_color = hex::decode(&opt.plot_color)?;
     let plot_plotters_color = RGBColor(plot_color[0], plot_color[1], plot_color[2]);
@@ -411,12 +485,19 @@ fn make_xyc<'a, 'b>(
         .f64()
         .map_err(|_| PlotError::InvalidData("X column is not numeric".to_string()))?
         .into_iter()
-        .zip(y.f64().map_err(|_| PlotError::InvalidData("Y column is not numeric".to_string()))?.into_iter());
+        .zip(
+            y.f64()
+                .map_err(|_| PlotError::InvalidData("Y column is not numeric".to_string()))?
+                .into_iter(),
+        );
 
     let color_iterator = if let Some(color_facet_index) = opt.color
     {
-        df.get_columns().get(color_facet_index - 1)
-            .ok_or_else(|| PlotError::InvalidColumn(format!("Color column {} not found", color_facet_index)))?
+        df.get_columns()
+            .get(color_facet_index - 1)
+            .ok_or_else(|| {
+                PlotError::InvalidColumn(format!("Color column {} not found", color_facet_index))
+            })?
             .as_series()
             .ok_or_else(|| PlotError::InvalidColumn("Color column conversion failed".to_string()))?
             .cast(&DataType::Categorical(None, CategoricalOrdering::Lexical))?
@@ -429,10 +510,21 @@ fn make_xyc<'a, 'b>(
     }
     else if let Some(color_gradient_index) = opt.gradient
     {
-        get_gradient_color_iter(&opt, df.get_columns().get(color_gradient_index - 1)
-            .ok_or_else(|| PlotError::InvalidColumn(format!("Gradient column {} not found", color_gradient_index)))?
-            .as_series()
-            .ok_or_else(|| PlotError::InvalidColumn("Gradient column conversion failed".to_string()))?)?
+        get_gradient_color_iter(
+            &opt,
+            df.get_columns()
+                .get(color_gradient_index - 1)
+                .ok_or_else(|| {
+                    PlotError::InvalidColumn(format!(
+                        "Gradient column {} not found",
+                        color_gradient_index
+                    ))
+                })?
+                .as_series()
+                .ok_or_else(|| {
+                    PlotError::InvalidColumn("Gradient column conversion failed".to_string())
+                })?,
+        )?
     }
     else
     {
@@ -473,34 +565,68 @@ where
                     (y_dim_min..y_dim_max).log_scale(),
                 )
                 .map_err(|e| PlotError::InvalidData(format!("Grid creation error: {}", e)))?;
-            grid.configure_mesh()
-                .disable_x_mesh()
-                .bold_line_style(WHITE.mix(0.3))
-                .y_desc(ydesc)
-                .x_desc(xdesc)
-                .label_style((opt.label_font.as_str(), opt.label_font_size))
-                .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
-                .draw()
-                .map_err(|e| PlotError::InvalidData(format!("Draw error: {}", e)))?;
+            let mesh_result = if opt.si_format
+            {
+                grid.configure_mesh()
+                    .disable_x_mesh()
+                    .bold_line_style(WHITE.mix(0.3))
+                    .y_desc(ydesc)
+                    .x_desc(xdesc)
+                    .label_style((opt.label_font.as_str(), opt.label_font_size))
+                    .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
+                    .x_label_formatter(&|x| format_si_number(*x))
+                    .y_label_formatter(&|y| format_si_number(*y))
+                    .draw()
+            }
+            else
+            {
+                grid.configure_mesh()
+                    .disable_x_mesh()
+                    .bold_line_style(WHITE.mix(0.3))
+                    .y_desc(ydesc)
+                    .x_desc(xdesc)
+                    .label_style((opt.label_font.as_str(), opt.label_font_size))
+                    .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
+                    .draw()
+            };
+            mesh_result.map_err(|e| PlotError::InvalidData(format!("Draw error: {}", e)))?;
 
-            grid.draw_series(shapes).map_err(|e| PlotError::InvalidData(format!("Backend Error: {}", e)))?;
+            grid.draw_series(shapes)
+                .map_err(|e| PlotError::InvalidData(format!("Backend Error: {}", e)))?;
         }
         else
         {
             let mut grid = chart
                 .build_cartesian_2d((x_dim_min..x_dim_max).log_scale(), y_dim_min..y_dim_max)
                 .map_err(|e| PlotError::InvalidData(format!("Grid creation error: {}", e)))?;
-            grid.configure_mesh()
-                .disable_x_mesh()
-                .bold_line_style(WHITE.mix(0.3))
-                .y_desc(ydesc)
-                .x_desc(xdesc)
-                .label_style((opt.label_font.as_str(), opt.label_font_size))
-                .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
-                .draw()
-                .map_err(|e| PlotError::InvalidData(format!("Draw error: {}", e)))?;
+            let mesh_result = if opt.si_format
+            {
+                grid.configure_mesh()
+                    .disable_x_mesh()
+                    .bold_line_style(WHITE.mix(0.3))
+                    .y_desc(ydesc)
+                    .x_desc(xdesc)
+                    .label_style((opt.label_font.as_str(), opt.label_font_size))
+                    .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
+                    .x_label_formatter(&|x| format_si_number(*x))
+                    .y_label_formatter(&|y| format_si_number(*y))
+                    .draw()
+            }
+            else
+            {
+                grid.configure_mesh()
+                    .disable_x_mesh()
+                    .bold_line_style(WHITE.mix(0.3))
+                    .y_desc(ydesc)
+                    .x_desc(xdesc)
+                    .label_style((opt.label_font.as_str(), opt.label_font_size))
+                    .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
+                    .draw()
+            };
+            mesh_result.map_err(|e| PlotError::InvalidData(format!("Draw error: {}", e)))?;
 
-            grid.draw_series(shapes).map_err(|e| PlotError::InvalidData(format!("Backend Error: {}", e)))?;
+            grid.draw_series(shapes)
+                .map_err(|e| PlotError::InvalidData(format!("Backend Error: {}", e)))?;
         }
     }
     else
@@ -510,34 +636,68 @@ where
             let mut grid = chart
                 .build_cartesian_2d(x_dim_min..x_dim_max, (y_dim_min..y_dim_max).log_scale())
                 .map_err(|e| PlotError::InvalidData(format!("Grid creation error: {}", e)))?;
-            grid.configure_mesh()
-                .disable_x_mesh()
-                .bold_line_style(WHITE.mix(0.3))
-                .y_desc(ydesc)
-                .x_desc(xdesc)
-                .label_style((opt.label_font.as_str(), opt.label_font_size))
-                .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
-                .draw()
-                .map_err(|e| PlotError::InvalidData(format!("Draw error: {}", e)))?;
+            let mesh_result = if opt.si_format
+            {
+                grid.configure_mesh()
+                    .disable_x_mesh()
+                    .bold_line_style(WHITE.mix(0.3))
+                    .y_desc(ydesc)
+                    .x_desc(xdesc)
+                    .label_style((opt.label_font.as_str(), opt.label_font_size))
+                    .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
+                    .x_label_formatter(&|x| format_si_number(*x))
+                    .y_label_formatter(&|y| format_si_number(*y))
+                    .draw()
+            }
+            else
+            {
+                grid.configure_mesh()
+                    .disable_x_mesh()
+                    .bold_line_style(WHITE.mix(0.3))
+                    .y_desc(ydesc)
+                    .x_desc(xdesc)
+                    .label_style((opt.label_font.as_str(), opt.label_font_size))
+                    .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
+                    .draw()
+            };
+            mesh_result.map_err(|e| PlotError::InvalidData(format!("Draw error: {}", e)))?;
 
-            grid.draw_series(shapes).map_err(|e| PlotError::InvalidData(format!("Backend Error: {}", e)))?;
+            grid.draw_series(shapes)
+                .map_err(|e| PlotError::InvalidData(format!("Backend Error: {}", e)))?;
         }
         else
         {
             let mut grid = chart
                 .build_cartesian_2d(x_dim_min..x_dim_max, y_dim_min..y_dim_max)
                 .map_err(|e| PlotError::InvalidData(format!("Grid creation error: {}", e)))?;
-            grid.configure_mesh()
-                .disable_x_mesh()
-                .bold_line_style(WHITE.mix(0.3))
-                .y_desc(ydesc)
-                .x_desc(xdesc)
-                .label_style((opt.label_font.as_str(), opt.label_font_size))
-                .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
-                .draw()
-                .map_err(|e| PlotError::InvalidData(format!("Draw error: {}", e)))?;
+            let mesh_result = if opt.si_format
+            {
+                grid.configure_mesh()
+                    .disable_x_mesh()
+                    .bold_line_style(WHITE.mix(0.3))
+                    .y_desc(ydesc)
+                    .x_desc(xdesc)
+                    .label_style((opt.label_font.as_str(), opt.label_font_size))
+                    .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
+                    .x_label_formatter(&|x| format_si_number(*x))
+                    .y_label_formatter(&|y| format_si_number(*y))
+                    .draw()
+            }
+            else
+            {
+                grid.configure_mesh()
+                    .disable_x_mesh()
+                    .bold_line_style(WHITE.mix(0.3))
+                    .y_desc(ydesc)
+                    .x_desc(xdesc)
+                    .label_style((opt.label_font.as_str(), opt.label_font_size))
+                    .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
+                    .draw()
+            };
+            mesh_result.map_err(|e| PlotError::InvalidData(format!("Draw error: {}", e)))?;
 
-            grid.draw_series(shapes).map_err(|e| PlotError::InvalidData(format!("Backend Error: {}", e)))?;
+            grid.draw_series(shapes)
+                .map_err(|e| PlotError::InvalidData(format!("Backend Error: {}", e)))?;
         }
     }
     Ok(())
@@ -545,12 +705,18 @@ where
 
 fn get_gradient_color_iter(opt: &Opt, series: &Series) -> Result<Vec<ShapeStyle>, PlotError>
 {
-    let values = series.f32().map_err(|_| PlotError::InvalidData("Gradient column is not numeric".to_string()))?;
+    let values = series
+        .f32()
+        .map_err(|_| PlotError::InvalidData("Gradient column is not numeric".to_string()))?;
     let grad = colorgrad::GradientBuilder::new()
         .html_colors(&["yellow", "red"])
         .domain(&[
-            values.min().ok_or_else(|| PlotError::InvalidData("No minimum value in gradient column".to_string()))?,
-            values.max().ok_or_else(|| PlotError::InvalidData("No maximum value in gradient column".to_string()))?
+            values.min().ok_or_else(|| {
+                PlotError::InvalidData("No minimum value in gradient column".to_string())
+            })?,
+            values.max().ok_or_else(|| {
+                PlotError::InvalidData("No maximum value in gradient column".to_string())
+            })?,
         ])
         .build::<colorgrad::LinearGradient>()
         .expect("prebuilt gradient should always work");
@@ -559,7 +725,8 @@ fn get_gradient_color_iter(opt: &Opt, series: &Series) -> Result<Vec<ShapeStyle>
         .into_iter()
         .map(|c| {
             ShapeStyle::from(
-                rbgcolor_from_gradient(grad.at(c.unwrap_or(0.0) as f32).to_rgba8(), opt.alpha).filled(),
+                rbgcolor_from_gradient(grad.at(c.unwrap_or(0.0) as f32).to_rgba8(), opt.alpha)
+                    .filled(),
             )
         })
         .collect();
