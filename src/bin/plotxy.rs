@@ -27,7 +27,7 @@ struct Opt
     x: usize,
 
     #[structopt(long, short, default_value = "0.3")]
-    /// transparancy channel
+    /// transparency channel
     alpha: f64,
 
     #[structopt(long, short, default_value = "1E88E5")]
@@ -46,7 +46,7 @@ struct Opt
     /// column index to be used as color gradient facet
     gradient: Option<usize>,
 
-    // r"" makes it prinable as escaped in default
+    // r"" makes it printable as escaped in default
     #[structopt(short, long, default_value = r"\t")]
     /// column delimiter
     delimiter: String,
@@ -60,7 +60,7 @@ struct Opt
     skip: usize,
 
     #[structopt(long, short)]
-    /// plot logarithmic Y-axis
+    /// plot logarithmic X-axis
     logx: bool,
 
     #[structopt(long, short)]
