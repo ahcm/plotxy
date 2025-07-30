@@ -201,8 +201,12 @@ struct Opt
     shape: String,
 
     #[arg(long)]
-    /// use SI number formatting for axis labels (K, M, G, etc.)
-    si_format: bool,
+    /// use SI number formatting for X-axis labels (K, M, G, etc.)
+    si_format_x: bool,
+
+    #[arg(long)]
+    /// use SI number formatting for Y-axis labels (K, M, G, etc.)
+    si_format_y: bool,
 }
 
 fn main() -> Result<(), PlotError>
@@ -565,9 +569,10 @@ where
                     (y_dim_min..y_dim_max).log_scale(),
                 )
                 .map_err(|e| PlotError::InvalidData(format!("Grid creation error: {}", e)))?;
-            let mesh_result = if opt.si_format
+            let mesh_result = match (opt.si_format_x, opt.si_format_y)
             {
-                grid.configure_mesh()
+                (true, true) => grid
+                    .configure_mesh()
                     .disable_x_mesh()
                     .bold_line_style(WHITE.mix(0.3))
                     .y_desc(ydesc)
@@ -576,18 +581,36 @@ where
                     .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
                     .x_label_formatter(&|x| format_si_number(*x))
                     .y_label_formatter(&|y| format_si_number(*y))
-                    .draw()
-            }
-            else
-            {
-                grid.configure_mesh()
+                    .draw(),
+                (true, false) => grid
+                    .configure_mesh()
                     .disable_x_mesh()
                     .bold_line_style(WHITE.mix(0.3))
                     .y_desc(ydesc)
                     .x_desc(xdesc)
                     .label_style((opt.label_font.as_str(), opt.label_font_size))
                     .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
-                    .draw()
+                    .x_label_formatter(&|x| format_si_number(*x))
+                    .draw(),
+                (false, true) => grid
+                    .configure_mesh()
+                    .disable_x_mesh()
+                    .bold_line_style(WHITE.mix(0.3))
+                    .y_desc(ydesc)
+                    .x_desc(xdesc)
+                    .label_style((opt.label_font.as_str(), opt.label_font_size))
+                    .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
+                    .y_label_formatter(&|y| format_si_number(*y))
+                    .draw(),
+                (false, false) => grid
+                    .configure_mesh()
+                    .disable_x_mesh()
+                    .bold_line_style(WHITE.mix(0.3))
+                    .y_desc(ydesc)
+                    .x_desc(xdesc)
+                    .label_style((opt.label_font.as_str(), opt.label_font_size))
+                    .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
+                    .draw(),
             };
             mesh_result.map_err(|e| PlotError::InvalidData(format!("Draw error: {}", e)))?;
 
@@ -599,9 +622,10 @@ where
             let mut grid = chart
                 .build_cartesian_2d((x_dim_min..x_dim_max).log_scale(), y_dim_min..y_dim_max)
                 .map_err(|e| PlotError::InvalidData(format!("Grid creation error: {}", e)))?;
-            let mesh_result = if opt.si_format
+            let mesh_result = match (opt.si_format_x, opt.si_format_y)
             {
-                grid.configure_mesh()
+                (true, true) => grid
+                    .configure_mesh()
                     .disable_x_mesh()
                     .bold_line_style(WHITE.mix(0.3))
                     .y_desc(ydesc)
@@ -610,18 +634,36 @@ where
                     .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
                     .x_label_formatter(&|x| format_si_number(*x))
                     .y_label_formatter(&|y| format_si_number(*y))
-                    .draw()
-            }
-            else
-            {
-                grid.configure_mesh()
+                    .draw(),
+                (true, false) => grid
+                    .configure_mesh()
                     .disable_x_mesh()
                     .bold_line_style(WHITE.mix(0.3))
                     .y_desc(ydesc)
                     .x_desc(xdesc)
                     .label_style((opt.label_font.as_str(), opt.label_font_size))
                     .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
-                    .draw()
+                    .x_label_formatter(&|x| format_si_number(*x))
+                    .draw(),
+                (false, true) => grid
+                    .configure_mesh()
+                    .disable_x_mesh()
+                    .bold_line_style(WHITE.mix(0.3))
+                    .y_desc(ydesc)
+                    .x_desc(xdesc)
+                    .label_style((opt.label_font.as_str(), opt.label_font_size))
+                    .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
+                    .y_label_formatter(&|y| format_si_number(*y))
+                    .draw(),
+                (false, false) => grid
+                    .configure_mesh()
+                    .disable_x_mesh()
+                    .bold_line_style(WHITE.mix(0.3))
+                    .y_desc(ydesc)
+                    .x_desc(xdesc)
+                    .label_style((opt.label_font.as_str(), opt.label_font_size))
+                    .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
+                    .draw(),
             };
             mesh_result.map_err(|e| PlotError::InvalidData(format!("Draw error: {}", e)))?;
 
@@ -636,9 +678,10 @@ where
             let mut grid = chart
                 .build_cartesian_2d(x_dim_min..x_dim_max, (y_dim_min..y_dim_max).log_scale())
                 .map_err(|e| PlotError::InvalidData(format!("Grid creation error: {}", e)))?;
-            let mesh_result = if opt.si_format
+            let mesh_result = match (opt.si_format_x, opt.si_format_y)
             {
-                grid.configure_mesh()
+                (true, true) => grid
+                    .configure_mesh()
                     .disable_x_mesh()
                     .bold_line_style(WHITE.mix(0.3))
                     .y_desc(ydesc)
@@ -647,18 +690,36 @@ where
                     .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
                     .x_label_formatter(&|x| format_si_number(*x))
                     .y_label_formatter(&|y| format_si_number(*y))
-                    .draw()
-            }
-            else
-            {
-                grid.configure_mesh()
+                    .draw(),
+                (true, false) => grid
+                    .configure_mesh()
                     .disable_x_mesh()
                     .bold_line_style(WHITE.mix(0.3))
                     .y_desc(ydesc)
                     .x_desc(xdesc)
                     .label_style((opt.label_font.as_str(), opt.label_font_size))
                     .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
-                    .draw()
+                    .x_label_formatter(&|x| format_si_number(*x))
+                    .draw(),
+                (false, true) => grid
+                    .configure_mesh()
+                    .disable_x_mesh()
+                    .bold_line_style(WHITE.mix(0.3))
+                    .y_desc(ydesc)
+                    .x_desc(xdesc)
+                    .label_style((opt.label_font.as_str(), opt.label_font_size))
+                    .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
+                    .y_label_formatter(&|y| format_si_number(*y))
+                    .draw(),
+                (false, false) => grid
+                    .configure_mesh()
+                    .disable_x_mesh()
+                    .bold_line_style(WHITE.mix(0.3))
+                    .y_desc(ydesc)
+                    .x_desc(xdesc)
+                    .label_style((opt.label_font.as_str(), opt.label_font_size))
+                    .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
+                    .draw(),
             };
             mesh_result.map_err(|e| PlotError::InvalidData(format!("Draw error: {}", e)))?;
 
@@ -670,9 +731,10 @@ where
             let mut grid = chart
                 .build_cartesian_2d(x_dim_min..x_dim_max, y_dim_min..y_dim_max)
                 .map_err(|e| PlotError::InvalidData(format!("Grid creation error: {}", e)))?;
-            let mesh_result = if opt.si_format
+            let mesh_result = match (opt.si_format_x, opt.si_format_y)
             {
-                grid.configure_mesh()
+                (true, true) => grid
+                    .configure_mesh()
                     .disable_x_mesh()
                     .bold_line_style(WHITE.mix(0.3))
                     .y_desc(ydesc)
@@ -681,18 +743,36 @@ where
                     .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
                     .x_label_formatter(&|x| format_si_number(*x))
                     .y_label_formatter(&|y| format_si_number(*y))
-                    .draw()
-            }
-            else
-            {
-                grid.configure_mesh()
+                    .draw(),
+                (true, false) => grid
+                    .configure_mesh()
                     .disable_x_mesh()
                     .bold_line_style(WHITE.mix(0.3))
                     .y_desc(ydesc)
                     .x_desc(xdesc)
                     .label_style((opt.label_font.as_str(), opt.label_font_size))
                     .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
-                    .draw()
+                    .x_label_formatter(&|x| format_si_number(*x))
+                    .draw(),
+                (false, true) => grid
+                    .configure_mesh()
+                    .disable_x_mesh()
+                    .bold_line_style(WHITE.mix(0.3))
+                    .y_desc(ydesc)
+                    .x_desc(xdesc)
+                    .label_style((opt.label_font.as_str(), opt.label_font_size))
+                    .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
+                    .y_label_formatter(&|y| format_si_number(*y))
+                    .draw(),
+                (false, false) => grid
+                    .configure_mesh()
+                    .disable_x_mesh()
+                    .bold_line_style(WHITE.mix(0.3))
+                    .y_desc(ydesc)
+                    .x_desc(xdesc)
+                    .label_style((opt.label_font.as_str(), opt.label_font_size))
+                    .axis_desc_style((opt.axis_desc_font.as_str(), opt.axis_desc_font_size))
+                    .draw(),
             };
             mesh_result.map_err(|e| PlotError::InvalidData(format!("Draw error: {}", e)))?;
 
