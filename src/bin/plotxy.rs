@@ -304,7 +304,7 @@ fn format_si_number(value: f64) -> String
     }
     else if abs_value >= 1e3
     {
-        format!("{:.2}K", value / 1000.0)
+        format!("{:.2}K", value / 1e3)
     }
     else if abs_value >= 1.0
     {
