@@ -508,25 +508,48 @@ fn make_xyc<'a, 'b>(
                 PlotError::InvalidColumn("Color column conversion failed".to_string())
             })?;
 
-        // Try to cast directly to Float64 first, fall back to String->Categorical->Float64 if needed
-        let numeric_series = if color_series.dtype().is_primitive_numeric()
+        // Handle numeric and string data differently for better categorical mapping
+        if color_series.dtype().is_primitive_numeric()
         {
-            color_series.cast(&DataType::Float64)?
+            // For numeric data, use values directly
+            let numeric_series = color_series.cast(&DataType::Float64)?;
+            numeric_series
+                .f64()
+                .map_err(|_| PlotError::InvalidData("Color column is not numeric".to_string()))?
+                .into_iter()
+                .map(|c| ShapeStyle::from(Palette99::pick(c.unwrap_or(0.0) as usize)).filled())
+                .collect()
         }
         else
         {
-            color_series
-                .cast(&DataType::String)?
-                .cast(&DataType::Categorical(None, CategoricalOrdering::Lexical))?
-                .cast(&DataType::Float64)?
-        };
+            // For string data, create a mapping from unique strings to color indices
+            let string_series = color_series.cast(&DataType::String)?;
+            let string_values = string_series
+                .str()
+                .map_err(|_| PlotError::InvalidData("Color column is not string".to_string()))?;
 
-        numeric_series
-            .f64()
-            .map_err(|_| PlotError::InvalidData("Color column is not numeric".to_string()))?
-            .into_iter()
-            .map(|c| ShapeStyle::from(Palette99::pick(c.unwrap_or(0.0) as usize)).filled())
-            .collect()
+            // Get unique values to create a consistent color mapping
+            let unique_values: std::collections::HashSet<_> =
+                string_values.into_iter().filter_map(|s| s).collect();
+
+            let value_to_index: std::collections::HashMap<String, usize> = unique_values
+                .into_iter()
+                .enumerate()
+                .map(|(i, s)| (s.to_string(), i))
+                .collect();
+
+            // Map each string value to its color index
+            string_values
+                .into_iter()
+                .map(|s| {
+                    let color_index = s
+                        .and_then(|str_val| value_to_index.get(str_val))
+                        .copied()
+                        .unwrap_or(0);
+                    ShapeStyle::from(Palette99::pick(color_index)).filled()
+                })
+                .collect()
+        }
     }
     else if let Some(color_gradient_index) = opt.gradient
     {
