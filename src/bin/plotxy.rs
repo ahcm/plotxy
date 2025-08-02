@@ -497,24 +497,30 @@ fn make_xyc<'a, 'b>(
 
     let color_iterator = if let Some(color_facet_index) = opt.color
     {
-        let color_series = df.get_columns()
+        let color_series = df
+            .get_columns()
             .get(color_facet_index - 1)
             .ok_or_else(|| {
                 PlotError::InvalidColumn(format!("Color column {} not found", color_facet_index))
             })?
             .as_series()
-            .ok_or_else(|| PlotError::InvalidColumn("Color column conversion failed".to_string()))?;
-        
+            .ok_or_else(|| {
+                PlotError::InvalidColumn("Color column conversion failed".to_string())
+            })?;
+
         // Try to cast directly to Float64 first, fall back to String->Categorical->Float64 if needed
-        let numeric_series = if color_series.dtype().is_primitive_numeric() {
+        let numeric_series = if color_series.dtype().is_primitive_numeric()
+        {
             color_series.cast(&DataType::Float64)?
-        } else {
+        }
+        else
+        {
             color_series
                 .cast(&DataType::String)?
                 .cast(&DataType::Categorical(None, CategoricalOrdering::Lexical))?
                 .cast(&DataType::Float64)?
         };
-        
+
         numeric_series
             .f64()
             .map_err(|_| PlotError::InvalidData("Color column is not numeric".to_string()))?
@@ -550,10 +556,11 @@ fn make_xyc<'a, 'b>(
     Ok(xy.zip(color_iterator))
 }
 
-// Macro to reduce duplication in mesh configuration
+// Compact macro for mesh configuration - much shorter than the original 16 duplicated blocks
 macro_rules! configure_and_draw_mesh {
     ($grid:expr, $opt:expr, $shapes:expr) => {{
-        let mesh_result = match ($opt.si_format_x, $opt.si_format_y) {
+        let mesh_result = match ($opt.si_format_x, $opt.si_format_y)
+        {
             (true, true) => $grid
                 .configure_mesh()
                 .disable_x_mesh()
@@ -596,7 +603,8 @@ macro_rules! configure_and_draw_mesh {
                 .draw(),
         };
         mesh_result.map_err(|e| PlotError::InvalidData(format!("Draw error: {}", e)))?;
-        $grid.draw_series($shapes)
+        $grid
+            .draw_series($shapes)
             .map_err(|e| PlotError::InvalidData(format!("Backend Error: {}", e)))?;
     }};
 }
@@ -618,9 +626,11 @@ where
     let y_dim_min = opt.y_dim_min;
     let x_dim_max = opt.x_dim_max.unwrap_or(next_potence(x_max as f64));
     let y_dim_max = opt.y_dim_max.unwrap_or(next_potence(y_max as f64));
-    
-    match (opt.logx, opt.logy) {
-        (true, true) => {
+
+    match (opt.logx, opt.logy)
+    {
+        (true, true) =>
+        {
             let mut grid = chart
                 .build_cartesian_2d(
                     (x_dim_min..x_dim_max).log_scale(),
@@ -629,19 +639,22 @@ where
                 .map_err(|e| PlotError::InvalidData(format!("Grid creation error: {}", e)))?;
             configure_and_draw_mesh!(grid, opt, shapes);
         }
-        (true, false) => {
+        (true, false) =>
+        {
             let mut grid = chart
                 .build_cartesian_2d((x_dim_min..x_dim_max).log_scale(), y_dim_min..y_dim_max)
                 .map_err(|e| PlotError::InvalidData(format!("Grid creation error: {}", e)))?;
             configure_and_draw_mesh!(grid, opt, shapes);
         }
-        (false, true) => {
+        (false, true) =>
+        {
             let mut grid = chart
                 .build_cartesian_2d(x_dim_min..x_dim_max, (y_dim_min..y_dim_max).log_scale())
                 .map_err(|e| PlotError::InvalidData(format!("Grid creation error: {}", e)))?;
             configure_and_draw_mesh!(grid, opt, shapes);
         }
-        (false, false) => {
+        (false, false) =>
+        {
             let mut grid = chart
                 .build_cartesian_2d(x_dim_min..x_dim_max, y_dim_min..y_dim_max)
                 .map_err(|e| PlotError::InvalidData(format!("Grid creation error: {}", e)))?;
