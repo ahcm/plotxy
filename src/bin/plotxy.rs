@@ -497,15 +497,25 @@ fn make_xyc<'a, 'b>(
 
     let color_iterator = if let Some(color_facet_index) = opt.color
     {
-        df.get_columns()
+        let color_series = df.get_columns()
             .get(color_facet_index - 1)
             .ok_or_else(|| {
                 PlotError::InvalidColumn(format!("Color column {} not found", color_facet_index))
             })?
             .as_series()
-            .ok_or_else(|| PlotError::InvalidColumn("Color column conversion failed".to_string()))?
-            .cast(&DataType::Categorical(None, CategoricalOrdering::Lexical))?
-            .cast(&DataType::Float64)?
+            .ok_or_else(|| PlotError::InvalidColumn("Color column conversion failed".to_string()))?;
+        
+        // Try to cast directly to Float64 first, fall back to String->Categorical->Float64 if needed
+        let numeric_series = if color_series.dtype().is_primitive_numeric() {
+            color_series.cast(&DataType::Float64)?
+        } else {
+            color_series
+                .cast(&DataType::String)?
+                .cast(&DataType::Categorical(None, CategoricalOrdering::Lexical))?
+                .cast(&DataType::Float64)?
+        };
+        
+        numeric_series
             .f64()
             .map_err(|_| PlotError::InvalidData("Color column is not numeric".to_string()))?
             .into_iter()
@@ -785,7 +795,8 @@ where
 
 fn get_gradient_color_iter(opt: &Opt, series: &Series) -> Result<Vec<ShapeStyle>, PlotError>
 {
-    let values = series
+    let float_series = series.cast(&DataType::Float32)?;
+    let values = float_series
         .f32()
         .map_err(|_| PlotError::InvalidData("Gradient column is not numeric".to_string()))?;
     let grad = colorgrad::GradientBuilder::new()

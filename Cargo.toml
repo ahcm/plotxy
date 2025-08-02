@@ -8,6 +8,14 @@ license = "EUPL-1.2"
 keywords = ["plot", "command-line", "CLI", "visualization", "TSV"]
 repository = "https://github.com/ahcm/plotxy"
 
+[[bin]]
+name = "plotxy"
+path = "src/bin/plotxy.rs"
+
+[[bin]]
+name = "plotrange"
+path = "src/bin/plotrange.rs"
+
 [dependencies]
 colorgrad = { version = "0.7.0", features = ["lab", "preset", "ggr", "named-colors"]}
 hex = "0.4.3"
